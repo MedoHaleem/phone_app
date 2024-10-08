@@ -23,4 +23,35 @@ defmodule PhoneApp.Conversations do
     messages = Query.SmsMessageStore.load_messages_with(contact)
     %Schema.Conversation{contact: contact, messages: messages}
   end
+
+  def send_sms_message(params = %Schema.NewMessage{}) do
+    msg = %{
+      from: your_number(),
+      body: params.body,
+      to: params.to
+    }
+
+    case PhoneApp.Twilio.send_sms_message!(msg) do
+      %{body: resp = %{}} ->
+        params = %{
+          message_sid: resp["sid"],
+          account_sid: resp["account_sid"],
+          body: resp["body"],
+          from: resp["from"],
+          to: resp["to"],
+          status: resp["status"],
+          direction: :outgoing
+        }
+        create_sms_message(params)
+
+      %{body: %{"code" => _, "message" => err}} -> {:error, err}
+
+      _err -> {:error, "Failed to send message"}
+    end
+  end
+
+  def your_number do
+    twilio_config = Application.get_env(:phone_app, :twilio, [])
+    Keyword.fetch!(twilio_config, :number)
+  end
 end

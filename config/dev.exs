@@ -1,4 +1,5 @@
 import Config
+import_config("./dev.secret.exs")
 
 # Configure your database
 config :phone_app, PhoneApp.Repo,

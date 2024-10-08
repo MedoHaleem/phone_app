@@ -24,6 +24,25 @@ defmodule PhoneAppWeb.MessageController do
     |> render("show.html")
   end
 
+  def new(conn, params) do
+    render(conn, "new.html", changeset: changeset(params))
+  end
+
+  def create(conn, params) do
+    create_changeset = changeset(params)
+
+    case Ecto.Changeset.apply_action(create_changeset, :insert) do
+      {:ok, message_params} ->
+        case PhoneApp.Conversations.send_sms_message(message_params) do
+          {:error, err} when is_bitstring(err) -> conn |> put_flash(:error, err) |> new(params)
+          {:ok, _result} -> redirect(conn, to: ~p(/messages))
+        end
+
+      {:error, changeset} ->
+        render(conn, "new.html", changeset: changeset)
+    end
+  end
+
   defp changeset(params) do
     conversation_params = Map.get(params, "message", %{})
     PhoneApp.Conversations.new_message_changeset(conversation_params)
