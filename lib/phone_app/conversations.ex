@@ -27,8 +27,8 @@ defmodule PhoneApp.Conversations do
   def send_sms_message(params = %Schema.NewMessage{}) do
     msg = %{
       from: your_number(),
-      body: params.body,
-      to: params.to
+      to: params.to,
+      body: params.body
     }
 
     case PhoneApp.Twilio.send_sms_message!(msg) do
@@ -42,11 +42,14 @@ defmodule PhoneApp.Conversations do
           status: resp["status"],
           direction: :outgoing
         }
+
         create_sms_message(params)
 
-      %{body: %{"code" => _, "message" => err}} -> {:error, err}
+      %{body: %{"code" => _, "message" => err}} ->
+        {:error, err}
 
-      _err -> {:error, "Failed to send message"}
+      _ ->
+        {:error, "Failed to send message"}
     end
   end
 
