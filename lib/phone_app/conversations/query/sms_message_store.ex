@@ -14,6 +14,10 @@ defmodule PhoneApp.Conversations.Query.SmsMessageStore do
     |> Repo.insert()
   end
 
+  def get_sms_message!(id) do
+    Repo.get!(SmsMessage, id)
+  end
+
   def update_sms_message(message_sid, update_params) do
     case Repo.get_by(SmsMessage, message_sid: message_sid) do
       nil -> {:error, :not_found}

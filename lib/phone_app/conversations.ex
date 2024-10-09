@@ -4,9 +4,28 @@ defmodule PhoneApp.Conversations do
 
   defdelegate get_contact!(id), to: Query.ContactStore
 
-  defdelegate create_sms_message(params), to: Query.SmsMessageStore
   defdelegate update_sms_message(sid, params), to: Query.SmsMessageStore
   defdelegate new_message_changeset(params), to: Schema.NewMessage, as: :changeset
+
+  def create_sms_message(params) do
+    PhoneApp.Repo.transaction(fn ->
+      with  {:ok, message} <- Query.SmsMessageStore.create_sms_message(params),
+      {:ok, _} <- maybe_enqueue_status_worker(message) do
+        message
+      else
+        {:error, cs} -> PhoneApp.Repo.rollback(cs)
+      end
+    end)
+  end
+
+  defp maybe_enqueue_status_worker(message) do
+    case message do
+      %{direction: :outgoing, status: "queued"} ->
+        PhoneApp.Conversations.Worker.StatusWorker.enqueue(message)
+
+      _ -> {:ok, :skipped}
+    end
+  end
 
   def load_conversation_list do
     messages = Query.SmsMessageStore.load_message_list()
